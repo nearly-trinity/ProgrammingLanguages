@@ -7,10 +7,10 @@ import Debug.Trace
 %wrapper "basic"
 
 $digit = 0-9
-$alpha = [a-zA-Z]
 
 tokens :-
   $white                   ;
+  --.*\n                   ;
   sqrt                     { const SqrtTok }
   fee                      { const FeeTok }
   pie                      { const PieTok }
@@ -26,19 +26,40 @@ tokens :-
   \%                       { const ModTok }
   \(                       { const LParenTok }
   \)                       { const RParenTok }
-  \n                       { const EolTok }
+  \[                       { const RBrakTok }
+  \]                       { const LBrakTok }
+  \\\/                     { const OrTok }
+  \/\\                     { const AndTok }
+  \=                       { const EqTok }
+  \<                       { const LessTok }
+  \>                       { const GreaterTok }
+  leq                      { const LeqTok }
+  geq                      { const GeqTok }
+  supposing                { const SupTok }
+  hence                    { const HenceTok }
+  otherwise                { const OtherwiseTok }
+  hearye                   { const HearyeTok }
+  oi                       { const OiTok }
+  is                       { const IsTok }
+  innit                    { const EolTok }
   ifz                      { const IfzTok }
   then                     { const ThenTok }
   else                     { const ElseTok }
-  [a-z][$alpha $digit]*    { VarTok }
+  ace                      { const TrueTok }
+  rank                     { const FalseTok }
+  ([A-Z_])+                { VarTok }
+  ``([^`]*)``              { StringTok }
   MS                       { const MsTok }
   MR                       { const MrTok }
 
 {
-data Token = VarTok String | IntTok Integer | RealTok Double
+data Token = VarTok String | IntTok Integer | RealTok Double | StringTok String
            | AddTok | SubTok | MulTok | DivTok | PowTok | ModTok
            | SqrtTok | LParenTok | RParenTok | EolTok | IfzTok | ThenTok | ElseTok
-           | MsTok | MrTok | FeeTok | PieTok | PhiTok | MoleTok
+           | MsTok | MrTok | FeeTok | PieTok | PhiTok | MoleTok | LeqTok | GeqTok
+           | SupTok | HenceTok | HearyeTok | OiTok | IsTok | LBrakTok | RBrakTok
+           | AndTok | OrTok | EqTok | ForTok | LessTok | GreaterTok | OtherwiseTok 
+           | TrueTok | FalseTok
            deriving (Show, Eq)
 
 scanTokens :: String -> Maybe [Token]
