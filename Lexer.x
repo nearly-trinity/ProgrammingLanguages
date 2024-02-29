@@ -10,7 +10,7 @@ $digit = 0-9
 
 tokens :-
   $white                   ;
-  --.*\n                   ;
+  ^"--".*                  ;
   sqrt                     { const SqrtTok }
   fee                      { const FeeTok }
   pie                      { const PieTok }
@@ -26,13 +26,14 @@ tokens :-
   \%                       { const ModTok }
   \(                       { const LParenTok }
   \)                       { const RParenTok }
-  \[                       { const RBrakTok }
-  \]                       { const LBrakTok }
+  \[                       { const LBrakTok }
+  \]                       { const RBrakTok }
   \\\/                     { const OrTok }
   \/\\                     { const AndTok }
   \=                       { const EqTok }
   \<                       { const LessTok }
   \>                       { const GreaterTok }
+  ForTok                   { const ForTok }
   leq                      { const LeqTok }
   geq                      { const GeqTok }
   supposing                { const SupTok }
@@ -49,14 +50,12 @@ tokens :-
   rank                     { const FalseTok }
   ([A-Z_])+                { VarTok }
   ``([^`]*)``              { StringTok }
-  MS                       { const MsTok }
-  MR                       { const MrTok }
 
 {
 data Token = VarTok String | IntTok Integer | RealTok Double | StringTok String
            | AddTok | SubTok | MulTok | DivTok | PowTok | ModTok
            | SqrtTok | LParenTok | RParenTok | EolTok | IfzTok | ThenTok | ElseTok
-           | MsTok | MrTok | FeeTok | PieTok | PhiTok | MoleTok | LeqTok | GeqTok
+           | FeeTok | PieTok | PhiTok | MoleTok | LeqTok | GeqTok
            | SupTok | HenceTok | HearyeTok | OiTok | IsTok | LBrakTok | RBrakTok
            | AndTok | OrTok | EqTok | ForTok | LessTok | GreaterTok | OtherwiseTok 
            | TrueTok | FalseTok

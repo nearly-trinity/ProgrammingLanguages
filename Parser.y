@@ -1,7 +1,7 @@
 {
 
 module Parser where
-import Evaluator (Expr(..), Value(..), Op(..), UnaryOp(..))
+import Evaluator (Stmt(..), Expr(..), Value(..), Op(..), UnaryOp(..))
 import Lexer (Token(..))
 
 }
@@ -9,6 +9,8 @@ import Lexer (Token(..))
 %token
     'integer'            { IntTok $$ }
     'real'               { RealTok $$ }
+    'var'                { VarTok $$ }
+    'string'             { StringTok $$ }
     '+'                  { AddTok }
     '-'                  { SubTok }
     '*'                  { MulTok }
@@ -16,18 +18,32 @@ import Lexer (Token(..))
     '^'                  { PowTok }
     'sqrt'               { SqrtTok }
     '%'                  { ModTok }
+    '['                  { LBrakTok }
+    ']'                  { RBrakTok }
     '('                  { LParenTok }
     ')'                  { RParenTok }
+    'and'                { AndTok }
+    'or'                 { OrTok }
+    '='                  { EqTok }
+    '<'                  { LessTok }
+    '>'                  { GreaterTok }
+    'leq'                { LeqTok }
+    'geq'                { GeqTok }
+    'sup'                { SupTok }
+    'hearye'             { HearyeTok }
+    'oi'                 { OiTok }
+    'is'                 { IsTok }
     'ifz'                { IfzTok }
-    'then'               { ThenTok }
-    'else'               { ElseTok }
-    'ms'                 { MsTok }
-    'mr'                 { MrTok }
-    'EOL'                { EolTok }
+    'for'                { ForTok }
+    'then'               { HenceTok }
+    'else'               { OtherwiseTok }
+    'innit'              { EolTok }
     'fee'                { FeeTok }
     'pie'                { PieTok }
     'phi'                { PhiTok }
     'mole'               { MoleTok }
+    'ace'                { TrueTok }
+    'rank'               { FalseTok }
 
 %name parse
 %tokentype { Token }
@@ -35,6 +51,9 @@ import Lexer (Token(..))
 
 %right 'ifz'
 %nonassoc 'then' 'else'
+%right '=' '<' '>' 'leq' 'geq'
+%left 'or'
+%left 'and'
 %left '+' '-'
 %left '*' '/' '%'
 %right '^'
@@ -47,14 +66,16 @@ Program
     | Statement                    { [$1] }
 
 Statement
-    : Expr 'EOL'                   { StmtExpr $1 }
-    | Expr 'ms' 'EOL'              { StmtMemStoreExpr $1 }
-    | Expr                         { StmtExpr $1 }
-    | Expr 'ms'                    { StmtMemStoreExpr $1 }
+    : Expr 'innit'                      { Stmt $1 }
+    | 'hearye' 'var' 'is' Expr 'innit'  { AssignStmt (Variable $2) $4 }
 
 Expr
     : 'integer'                          { IntLit $1 }
     | 'real'                             { RealLit $1 }
+    | 'string'                           { StringLit $1 }
+    | 'var'                              { Variable $1 }
+    | 'ace'                              { Const "true" }
+    | 'rank'                             { Const "false" }
     | 'fee'                              { Const "fee" }
     | 'pie'                              { Const "pie" }
     | 'phi'                              { Const "phi" }
@@ -65,11 +86,20 @@ Expr
     | Expr '/' Expr                      { BinOp Div $1 $3 }
     | Expr '^' Expr                      { BinOp Pow $1 $3 }
     | Expr '%' Expr                      { BinOp Mod $1 $3 }
+    | Expr 'and' Expr                    { BinOp And $1 $3 }
+    | Expr 'or' Expr                     { BinOp Or $1 $3 }
+    | Expr 'leq' Expr                    { BinOp Leq $1 $3 }
+    | Expr 'geq' Expr                    { BinOp Geq $1 $3 }
+    | Expr '<' Expr                      { BinOp LessThan $1 $3 }
+    | Expr '>' Expr                      { BinOp GreaterThan $1 $3 }
+    | Expr '=' Expr                      { BinOp Equals $1 $3 }
     | '-' Expr                           { UnaryOp Negate $2 }  
     | 'sqrt' Expr                        { UnaryOp Sqrt $2 }
     | 'ifz' Expr 'then' Expr 'else' Expr { Ifz $2 $4 $6 }
-    | 'mr'                               { MemRecall }
+    | 'sup' Expr 'then' Expr 'else' Expr { Supposing $2 $4 $6 }
     | '(' Expr ')'                       { $2 }
+    | '[' Expr ']'                       { $2 }
+    -- | 'oi' 'var' 'is' Expr 'for' Expr    { Oi $2 $4 $6 } 
 
 
 {

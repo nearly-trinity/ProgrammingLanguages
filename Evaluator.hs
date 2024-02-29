@@ -1,25 +1,32 @@
-module Evaluator (Expr(..), Value(..), Op(..), UnaryOp(..), eval) where
+module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), eval) where
+
+data Stmt = Stmt Expr
+          | AssignStmt Expr Expr
+          deriving (Show, Eq)
 
 data Expr = IntLit Integer
           | RealLit Double
+          | StringLit String
           | Const String
+          | Variable String
           | BinOp Op Expr Expr
           | UnaryOp UnaryOp Expr
           | Ifz Expr Expr Expr
-          | MemRecall
-          | StmtExpr Expr
-          | StmtMemStoreExpr Expr
+          | Supposing Expr Expr Expr
+          | Oi Expr Expr Expr
           deriving (Show, Eq)
 
 
 data Op = Add | Sub | Mul | Div | Pow | Mod
-          deriving (Show, Eq)
+        | And | Or | Leq | Geq | LessThan | GreaterThan | Equals
+        deriving (Show, Eq)
 
 data UnaryOp = Negate | Sqrt
              deriving (Show, Eq)
 
 data Value = IntVal Integer
            | RealVal Double
+           | BoolVal Bool
            deriving (Show, Eq)
 
 negateV :: Value -> Value
@@ -86,9 +93,6 @@ eval (Ifz condExpr thenExpr elseExpr) = case eval condExpr of
     RealVal 0.0 -> eval thenExpr
     IntVal 0    -> eval thenExpr
     _           -> eval elseExpr
-eval MemRecall = IntVal 0
-eval (StmtMemStoreExpr expr) = eval expr
-eval (StmtExpr expr) = eval expr
 
 
 -- if b1 then true else if b2 then true else false

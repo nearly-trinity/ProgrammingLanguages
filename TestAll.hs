@@ -23,6 +23,6 @@ inputLoop = do
         putStrLn $ "Input: " ++ inputString
         putStrLn $ "Tokens: " ++ show tokens
         putStrLn $ "Expression: " ++ show expression
-        let result = eval $ head expression
-        putStrLn $ "Result: " ++ show result
+        -- let result = eval $ head expression
+        -- putStrLn $ "Result: " ++ show result
     inputLoop
