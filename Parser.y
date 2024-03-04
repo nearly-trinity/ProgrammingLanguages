@@ -99,7 +99,7 @@ Expr
     | 'sup' Expr 'then' Expr 'else' Expr { Supposing $2 $4 $6 }
     | '(' Expr ')'                       { $2 }
     | '[' Expr ']'                       { $2 }
-    -- | 'oi' 'var' 'is' Expr 'for' Expr    { Oi $2 $4 $6 } 
+    | 'oi' 'var' 'is' Expr 'for' Expr    { Oi (Variable $2) $4 $6 } 
 
 
 {

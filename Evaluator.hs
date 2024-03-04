@@ -1,4 +1,6 @@
-module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), eval) where
+module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), Env, evalStatement, initialEnv) where
+
+type VariableName = String
 
 data Stmt = Stmt Expr
           | AssignStmt Expr Expr
@@ -8,14 +10,13 @@ data Expr = IntLit Integer
           | RealLit Double
           | StringLit String
           | Const String
-          | Variable String
+          | Variable VariableName
           | BinOp Op Expr Expr
           | UnaryOp UnaryOp Expr
           | Ifz Expr Expr Expr
           | Supposing Expr Expr Expr
           | Oi Expr Expr Expr
           deriving (Show, Eq)
-
 
 data Op = Add | Sub | Mul | Div | Pow | Mod
         | And | Or | Leq | Geq | LessThan | GreaterThan | Equals
@@ -71,14 +72,29 @@ divV valueA valueB = let
      else RealVal result
 
 
+type Env = [(VariableName, Value)]
+
+initialEnv = [
+    ("mole" , RealVal 6.02214076e23),
+    ("pie"  , RealVal pi),
+    ("fee"  , RealVal (-1.0)),
+    ("phi"  , RealVal 1.618),
+    ("true" , BoolVal True),
+    ("false", BoolVal False)]
+
+evalStatement :: Stmt -> Env -> (Value, Env)
+evalStatement (Stmt expr) env = (eval expr, env)
+
 eval :: Expr -> Value
 eval (IntLit i) = IntVal i
 eval (RealLit r) = RealVal r
 eval (Const c) = case c of 
-    "mole" -> RealVal 6.02214076e23
-    "pie"  -> RealVal pi
-    "fee"  -> RealVal (-1.0)
-    "phi"  -> RealVal 1.618
+    "mole"  -> RealVal 6.02214076e23
+    "pie"   -> RealVal pi
+    "fee"   -> RealVal (-1.0)
+    "phi"   -> RealVal 1.618
+    "true"  -> BoolVal True
+    "false" -> BoolVal False
 eval (BinOp op expA expB) = case op of
     Add -> addV (eval expA) (eval expB) 
     Sub -> addV (eval expA) (negateV (eval expB)) 
