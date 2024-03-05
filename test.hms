@@ -11,3 +11,8 @@ ifz B hence 0 otherwise 1 innit
 A innit
 B innit
 TRUE_BOOL innit
+[TRUE_BOOL] innit
+[A] innit
+[B] innit
+[(A + 3) * 4] innit
+[(A + 3) * [4]] innit

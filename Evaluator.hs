@@ -100,13 +100,31 @@ compareVals op (RealVal a) (IntVal b)  = Right $ BoolVal (op a (fromIntegral b))
 compareVals op (IntVal a) (RealVal b)  = Right $ BoolVal (op (fromIntegral a) b)
 compareVals _ _ _                      = Left "ERROR -> compareVals: Operands must be integer or real values"
 
-andV :: Value -> Value -> Either String Value
-andV (BoolVal a) (BoolVal b) = Right $ BoolVal (a && b)
-andV _ _                     = Left "ERROR -> AND: Operands must both be booleans"
+andV :: Expr -> Expr -> Env -> Either String Value
+andV leftExpr rightExpr env = do
+  leftValue <- eval leftExpr env
+  case leftValue of
+    BoolVal True  -> do
+      rightValue <- eval rightExpr env
+      case rightValue of 
+        BoolVal True  -> Right $ BoolVal True
+        BoolVal False -> Right $ BoolVal False
+        _             -> Left "ERROR -> AND: Operands must both be booleans"
+    BoolVal False -> Right $ BoolVal False
+    _             -> Left "ERROR -> AND: Operands must both be booleans"
 
-orV :: Value -> Value -> Either String Value
-orV (BoolVal a) (BoolVal b) = Right $ BoolVal (a || b)
-orV _ _                     = Left "ERROR -> OR: Operands must both be booleans"
+orV :: Expr -> Expr -> Env -> Either String Value
+orV leftExpr rightExpr env = do
+  leftValue <- eval leftExpr env 
+  case leftValue of
+    BoolVal False -> do 
+      rightVal <- eval rightExpr env
+      case rightVal of
+        BoolVal True  -> Right $ BoolVal True
+        BoolVal False -> Right $ BoolVal False
+        _             -> Left "ERROR -> OR: Operands must both be booleans"
+    BoolVal True -> Right $ BoolVal True
+    _            -> Left "ERROR -> OR: Operands must both be booleans"
 
 type Env = [(VariableName, Value)]
 
@@ -152,23 +170,25 @@ eval (Variable varName) env = getVariable varName env
 eval (IntLit i) env = Right $ IntVal i
 eval (RealLit r) env = Right $ RealVal r
 eval (Const c) env = getVariable c env
-eval (BinOp op expA expB) env = do
-    valA <- eval expA env
-    valB <- eval expB env
+eval (BinOp op expA expB) env = 
     case op of
-        Add         -> addV valA valB
-        Sub         -> subV valA valB
-        Div         -> divV valA valB
-        Mul         -> multV valA valB
-        Pow         -> powV valA valB
-        Mod         -> modV valA valB
-        Leq         -> compareVals (<=) valA valB
-        Geq         -> compareVals (>=) valA valB
-        LessThan    -> compareVals (<) valA valB
-        GreaterThan -> compareVals (>) valA valB
-        Equals      -> compareVals (==) valA valB
-        And         -> andV valA valB
-        Or          -> orV valA valB
+      And -> andV expA expB env        
+      Or  -> orV expA expB env
+      _ -> do
+        valA <- eval expA env
+        valB <- eval expB env
+        case op of
+            Add         -> addV valA valB
+            Sub         -> subV valA valB
+            Div         -> divV valA valB
+            Mul         -> multV valA valB
+            Pow         -> powV valA valB
+            Mod         -> modV valA valB
+            Leq         -> compareVals (<=) valA valB
+            Geq         -> compareVals (>=) valA valB
+            LessThan    -> compareVals (<) valA valB
+            GreaterThan -> compareVals (>) valA valB
+            Equals      -> compareVals (==) valA valB
 eval (UnaryOp op expr) env = do
     val <- eval expr env
     case op of
