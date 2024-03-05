@@ -100,16 +100,17 @@ compareVals op (RealVal a) (IntVal b)  = Right $ BoolVal (op a (fromIntegral b))
 compareVals op (IntVal a) (RealVal b)  = Right $ BoolVal (op (fromIntegral a) b)
 compareVals _ _ _                      = Left "ERROR -> compareVals: Operands must be integer or real values"
 
-handleAnd :: Value -> Value -> Either String Value
-handleAnd (BoolVal a) (BoolVal b) = Right $ BoolVal (a && b)
-handleAnd _ _                     = Left "ERROR -> AND: Operands must both be booleans"
+andV :: Value -> Value -> Either String Value
+andV (BoolVal a) (BoolVal b) = Right $ BoolVal (a && b)
+andV _ _                     = Left "ERROR -> AND: Operands must both be booleans"
 
-handleOr :: Value -> Value -> Either String Value
-handleOr (BoolVal a) (BoolVal b) = Right $ BoolVal (a || b)
-handleOr _ _                     = Left "ERROR -> OR: Operands must both be booleans"
+orV :: Value -> Value -> Either String Value
+orV (BoolVal a) (BoolVal b) = Right $ BoolVal (a || b)
+orV _ _                     = Left "ERROR -> OR: Operands must both be booleans"
 
 type Env = [(VariableName, Value)]
 
+initialEnv :: [(String, Value)]
 initialEnv = [
     ("mole" , RealVal 6.02214076e23),
     ("pie"  , RealVal pi),
@@ -166,8 +167,8 @@ eval (BinOp op expA expB) env = do
         LessThan    -> compareVals (<) valA valB
         GreaterThan -> compareVals (>) valA valB
         Equals      -> compareVals (==) valA valB
-        Or          -> handleOr valA valB
-        And         -> handleAnd valA valB
+        And         -> andV valA valB
+        Or          -> orV valA valB
 eval (UnaryOp op expr) env = do
     val <- eval expr env
     case op of
