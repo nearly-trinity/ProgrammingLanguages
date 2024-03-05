@@ -4,6 +4,7 @@ type VariableName = String
 
 data Stmt = Stmt Expr
           | AssignStmt Expr Expr
+          | CommentStmt
           deriving (Show, Eq)
 
 data Expr = IntLit Integer
@@ -143,6 +144,7 @@ evalStatement (AssignStmt (Variable varName) expr) env = do
     let newEnv    = insertOrReplace varName value env
     let outputStr = varName ++ " <- " ++ prettyPrint value
     return (AssignmentVal outputStr, newEnv)
+evalStatement CommentStmt env = Left ""
 
 eval :: Expr -> Env -> Either String Value
 eval (Variable varName) env = getVariable varName env

@@ -1,0 +1,13 @@
+hearye A is 1 innit
+hearye B is 2 innit
+hearye A is (A + A)*B innit
+A innit
+B innit
+oi A is 999 for A + 1 innit
+hearye TRUE_BOOL is ace innit
+-- this is a comment
+supposing TRUE_BOOL hence A otherwise B innit
+ifz B hence 0 otherwise 1 innit
+A innit
+B innit
+TRUE_BOOL innit

@@ -44,6 +44,7 @@ import Lexer (Token(..))
     'mole'               { MoleTok }
     'ace'                { TrueTok }
     'rank'               { FalseTok }
+    'comment'            { CommentTok }
 
 %name parse
 %tokentype { Token }
@@ -68,6 +69,7 @@ Program
 Statement
     : Expr 'innit'                      { Stmt $1 }
     | 'hearye' 'var' 'is' Expr 'innit'  { AssignStmt (Variable $2) $4 }
+    | 'comment'                         { CommentStmt }
 
 Expr
     : 'integer'                          { IntLit $1 }

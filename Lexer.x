@@ -10,7 +10,7 @@ $digit = 0-9
 
 tokens :-
   $white                   ;
-  ^"--".*                  ;
+  ^"--".*                  { const CommentTok }
   sqrt                     { const SqrtTok }
   fee                      { const FeeTok }
   pie                      { const PieTok }
@@ -56,9 +56,9 @@ data Token = VarTok String | IntTok Integer | RealTok Double | StringTok String
            | AddTok | SubTok | MulTok | DivTok | PowTok | ModTok
            | SqrtTok | LParenTok | RParenTok | EolTok | IfzTok | ThenTok | ElseTok
            | FeeTok | PieTok | PhiTok | MoleTok | LeqTok | GeqTok
-           | SupTok | HenceTok | HearyeTok | OiTok | IsTok | LBrakTok | RBrakTok
-           | AndTok | OrTok | EqTok | ForTok | LessTok | GreaterTok | OtherwiseTok 
-           | TrueTok | FalseTok
+           | SupTok | HearyeTok | OiTok | IsTok | LBrakTok | RBrakTok
+           | AndTok | OrTok | EqTok | ForTok | LessTok | GreaterTok 
+           | TrueTok | FalseTok | CommentTok
            deriving (Show, Eq)
 
 scanTokens :: String -> Maybe [Token]

@@ -4386,20 +4386,21 @@ alex_accept = listArray (0 :: Int, 118)
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
+  , AlexAcc 39
+  , AlexAccNone
+  , AlexAccNone
   , AlexAcc 38
   , AlexAccNone
   , AlexAccNone
   , AlexAcc 37
   , AlexAccNone
-  , AlexAccNone
   , AlexAcc 36
-  , AlexAccNone
   , AlexAcc 35
   , AlexAcc 34
   , AlexAcc 33
   , AlexAcc 32
-  , AlexAcc 31
   , AlexAccNone
+  , AlexAcc 31
   , AlexAcc 30
   , AlexAcc 29
   , AlexAcc 28
@@ -4410,14 +4411,16 @@ alex_accept = listArray (0 :: Int, 118)
   , AlexAcc 23
   , AlexAcc 22
   , AlexAcc 21
-  , AlexAcc 20
   , AlexAccNone
+  , AlexAcc 20
   , AlexAcc 19
+  , AlexAccNone
+  , AlexAccNone
+  , AlexAccNone
   , AlexAcc 18
   , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
   , AlexAcc 17
+  , AlexAccNone
   , AlexAccNone
   , AlexAcc 16
   , AlexAccNone
@@ -4425,21 +4428,18 @@ alex_accept = listArray (0 :: Int, 118)
   , AlexAcc 15
   , AlexAccNone
   , AlexAccNone
+  , AlexAccNone
   , AlexAcc 14
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
-  , AlexAcc 13
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
   , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccNone
-  , AlexAccSkipPred (alexPrevCharMatches(\c -> c >= '\n' && c <= '\n' || False))(AlexAccNone)
+  , AlexAccPred 13 (alexPrevCharMatches(\c -> c >= '\n' && c <= '\n' || False))(AlexAccNone)
   , AlexAccSkip
   , AlexAccNone
   , AlexAcc 12
@@ -4501,33 +4501,34 @@ alex_accept = listArray (0 :: Int, 118)
   , AlexAccNone
   ]
 
-alex_actions = array (0 :: Int, 39)
-  [ (38,alex_action_27)
-  , (37,alex_action_26)
-  , (36,alex_action_25)
-  , (35,alex_action_24)
-  , (34,alex_action_23)
-  , (33,alex_action_22)
-  , (32,alex_action_21)
-  , (31,alex_action_20)
-  , (30,alex_action_19)
-  , (29,alex_action_18)
-  , (28,alex_action_17)
-  , (27,alex_action_16)
-  , (26,alex_action_15)
-  , (25,alex_action_14)
-  , (24,alex_action_13)
-  , (23,alex_action_12)
-  , (22,alex_action_11)
-  , (21,alex_action_10)
-  , (20,alex_action_9)
-  , (19,alex_action_8)
-  , (18,alex_action_7)
-  , (17,alex_action_6)
-  , (16,alex_action_5)
-  , (15,alex_action_4)
-  , (14,alex_action_3)
-  , (13,alex_action_2)
+alex_actions = array (0 :: Int, 40)
+  [ (39,alex_action_27)
+  , (38,alex_action_26)
+  , (37,alex_action_25)
+  , (36,alex_action_24)
+  , (35,alex_action_23)
+  , (34,alex_action_22)
+  , (33,alex_action_21)
+  , (32,alex_action_20)
+  , (31,alex_action_19)
+  , (30,alex_action_18)
+  , (29,alex_action_17)
+  , (28,alex_action_16)
+  , (27,alex_action_15)
+  , (26,alex_action_14)
+  , (25,alex_action_13)
+  , (24,alex_action_12)
+  , (23,alex_action_11)
+  , (22,alex_action_10)
+  , (21,alex_action_9)
+  , (20,alex_action_8)
+  , (19,alex_action_7)
+  , (18,alex_action_6)
+  , (17,alex_action_5)
+  , (16,alex_action_4)
+  , (15,alex_action_3)
+  , (14,alex_action_2)
+  , (13,alex_action_1)
   , (12,alex_action_40)
   , (11,alex_action_39)
   , (10,alex_action_38)
@@ -4543,6 +4544,7 @@ alex_actions = array (0 :: Int, 39)
   , (0,alex_action_28)
   ]
 
+alex_action_1 = const CommentTok
 alex_action_2 = const SqrtTok
 alex_action_3 = const FeeTok
 alex_action_4 = const PieTok
@@ -4827,9 +4829,9 @@ data Token = VarTok String | IntTok Integer | RealTok Double | StringTok String
            | AddTok | SubTok | MulTok | DivTok | PowTok | ModTok
            | SqrtTok | LParenTok | RParenTok | EolTok | IfzTok | ThenTok | ElseTok
            | FeeTok | PieTok | PhiTok | MoleTok | LeqTok | GeqTok
-           | SupTok | HenceTok | HearyeTok | OiTok | IsTok | LBrakTok | RBrakTok
-           | AndTok | OrTok | EqTok | ForTok | LessTok | GreaterTok | OtherwiseTok 
-           | TrueTok | FalseTok
+           | SupTok | HearyeTok | OiTok | IsTok | LBrakTok | RBrakTok
+           | AndTok | OrTok | EqTok | ForTok | LessTok | GreaterTok 
+           | TrueTok | FalseTok | CommentTok
            deriving (Show, Eq)
 
 scanTokens :: String -> Maybe [Token]
