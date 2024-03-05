@@ -1,4 +1,4 @@
-module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), Env, evalStatement, initialEnv) where
+module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), Env, evalStatement, initialEnv, prettyPrint) where
 
 type VariableName = String
 
@@ -28,49 +28,69 @@ data UnaryOp = Negate | Sqrt
 data Value = IntVal Integer
            | RealVal Double
            | BoolVal Bool
+           | AssignmentVal String
            deriving (Show, Eq)
 
-negateV :: Value -> Value
-negateV (RealVal x) = RealVal (-x)
-negateV (IntVal x)  = IntVal (-x)
+negateV :: Value -> Either String Value
+negateV (BoolVal x) = Right $ BoolVal (not x)
+negateV (RealVal x) = Right $ RealVal (-x)
+negateV (IntVal x)  = Right $ IntVal (-x)
+negateV _           = Left "ERROR -> negateV: Unsupported type"
 
-sqrtV :: Value -> Value
-sqrtV (RealVal x) = RealVal (sqrt x)
-sqrtV (IntVal x)  = RealVal (sqrt $ fromIntegral x)
+sqrtV :: Value -> Either String Value
+sqrtV (RealVal x) 
+  | x >= 0    = Right $ RealVal (sqrt x)
+  | otherwise = Left "ERROR -> sqrtV: Cannot take square root of a negative number"
+sqrtV (IntVal x)  
+  | x >= 0    = Right $ RealVal (sqrt $ fromIntegral x)
+  | otherwise = Left "ERROR -> sqrtV: Cannot take square root of a negative number"
+sqrtV _           = Left "ERROR -> sqrtV: Unsupported type"
 
-arithOp :: (Integer -> Integer -> Integer) -> (Double -> Double -> Double) -> Value -> Value -> Value
-arithOp intF floatF (IntVal intA) (IntVal intB)     = IntVal (intF intA intB)
-arithOp intF floatF (RealVal realA) (RealVal realB) = RealVal (floatF realA realB)
-arithOp intF floatF (IntVal int) (RealVal real)     = RealVal (floatF (fromIntegral int) real)
-arithOp intF floatF (RealVal real) (IntVal int)     = RealVal (floatF real (fromIntegral int))
+arithOp :: (Integer -> Integer -> Integer) -> (Double -> Double -> Double) -> Value -> Value -> Either String Value
+arithOp intF floatF (IntVal intA) (IntVal intB)     = Right $ IntVal (intF intA intB)
+arithOp intF floatF (RealVal realA) (RealVal realB) = Right $ RealVal (floatF realA realB)
+arithOp intF floatF (IntVal int) (RealVal real)     = Right $ RealVal (floatF (fromIntegral int) real)
+arithOp intF floatF (RealVal real) (IntVal int)     = Right $ RealVal (floatF real (fromIntegral int))
+arithOp _ _ _ _                                     = Left "ERROR -> arithOp: Incompatible types"
 
-addV :: Value -> Value -> Value
+addV :: Value -> Value -> Either String Value
 addV = arithOp (+) (+)
 
-multV :: Value -> Value -> Value
+subV :: Value -> Value -> Either String Value
+subV = arithOp (-) (-)
+
+multV :: Value -> Value -> Either String Value
 multV = arithOp (*) (*)
 
-powV :: Value -> Value -> Value
+powV :: Value -> Value -> Either String Value
 powV = arithOp (\a b -> floor $ fromIntegral a ** fromIntegral b) (**)
 
-modV :: Value -> Value -> Value
-modV (RealVal realA) (RealVal realB) = IntVal (floor realA `mod` floor realB)
-modV (IntVal intA) (IntVal intB)     = IntVal (intA `mod` intB)
-modV (RealVal r) (IntVal i)          = IntVal (floor r `mod` i)
-modV (IntVal i) (RealVal r)          = IntVal (i `mod` floor r)
+modV :: Value -> Value -> Either String Value
+modV (RealVal realA) (RealVal realB) = Right $ IntVal (floor realA `mod` floor realB)
+modV (IntVal intA) (IntVal intB)     = Right $ IntVal (intA `mod` intB)
+modV (RealVal r) (IntVal i)          = Right $ IntVal (floor r `mod` i)
+modV (IntVal i) (RealVal r)          = Right $ IntVal (i `mod` floor r)
+modV _ _                             = Left "ERROR -> modV: Incompatible types"
 
 toDouble :: Value -> Double
 toDouble (IntVal i) = fromIntegral i
 toDouble (RealVal r) = r
 
-divV :: Value -> Value -> Value
-divV valueA valueB = let
-  result = toDouble valueA / toDouble valueB
-  resultInt = floor result
-  in if fromIntegral resultInt == result
-     then IntVal resultInt
-     else RealVal result
-
+divV :: Value -> Value -> Either String Value
+divV valueA valueB = case (valueA, valueB) of
+  (_, IntVal 0) -> Left "ERROR -> divV: Division by zero"
+  (_, RealVal 0.0) -> Left "ERROR -> divV: Division by zero"
+  (IntVal i, IntVal j) ->
+    let result = fromIntegral i / fromIntegral j
+        resultInt = floor result
+    in Right $ if fromIntegral resultInt == result then IntVal resultInt else RealVal result
+  (RealVal r, RealVal s) ->
+    Right $ RealVal (r / s)
+  (IntVal i, RealVal r) ->
+    Right $ RealVal (fromIntegral i / r)
+  (RealVal r, IntVal i) ->
+    Right $ RealVal (r / fromIntegral i)
+  _ -> Left "ERROR -> divV: Incompatible types for division"
 
 type Env = [(VariableName, Value)]
 
@@ -82,35 +102,58 @@ initialEnv = [
     ("true" , BoolVal True),
     ("false", BoolVal False)]
 
-evalStatement :: Stmt -> Env -> (Value, Env)
-evalStatement (Stmt expr) env = (eval expr, env)
+prettyPrint :: Value -> String
+prettyPrint (IntVal i) = show i
+prettyPrint (RealVal r) = show r
+prettyPrint (BoolVal b) = show b
+prettyPrint (AssignmentVal s) = s
 
-eval :: Expr -> Value
-eval (IntLit i) = IntVal i
-eval (RealLit r) = RealVal r
-eval (Const c) = case c of 
-    "mole"  -> RealVal 6.02214076e23
-    "pie"   -> RealVal pi
-    "fee"   -> RealVal (-1.0)
-    "phi"   -> RealVal 1.618
-    "true"  -> BoolVal True
-    "false" -> BoolVal False
-eval (BinOp op expA expB) = case op of
-    Add -> addV (eval expA) (eval expB) 
-    Sub -> addV (eval expA) (negateV (eval expB)) 
-    Mul -> multV (eval expA) (eval expB) 
-    Div -> divV (eval expA) (eval expB) 
-    Pow -> powV (eval expA) (eval expB) 
-    Mod -> modV (eval expA) (eval expB) 
-eval (UnaryOp op expr) = case op of
-    Negate -> negateV (eval expr)
-    Sqrt   -> sqrtV (eval expr)
-eval (Ifz condExpr thenExpr elseExpr) = case eval condExpr of 
-    RealVal 0.0 -> eval thenExpr
-    IntVal 0    -> eval thenExpr
-    _           -> eval elseExpr
+insertOrReplace :: VariableName -> Value -> Env -> Env
+insertOrReplace key value [] = [(key, value)]
+insertOrReplace key value ((k,v):xs)
+    | key == k = (key, value) : xs
+    | otherwise = (k,v) : insertOrReplace key value xs
 
+getVariable :: VariableName -> Env -> Either String Value
+getVariable name env = case lookup name env of
+        Just x  -> Right x
+        Nothing -> Left "ERROR -> getVariable: Variable does not exist"
 
--- if b1 then true else if b2 then true else false
--- b1 True b2
+evalStatement :: Stmt -> Env -> Either String (Value, Env)
+evalStatement (Stmt expr) env = do 
+    value <- eval expr env
+    return (value, env)
+evalStatement (AssignStmt (Variable varName) expr) env = do
+    value <- eval expr env
+    let newEnv    = insertOrReplace varName value env
+    let outputStr = varName ++ " <- " ++ prettyPrint value
+    return (AssignmentVal outputStr, newEnv)
 
+eval :: Expr -> Env -> Either String Value
+eval (Variable varName) env = getVariable varName env
+eval (IntLit i) env = Right $ IntVal i
+eval (RealLit r) env = Right $ RealVal r
+eval (Const c) env = getVariable c env
+eval (BinOp op expA expB) env = do
+    valA <- eval expA env
+    valB <- eval expB env
+    case op of
+        Add -> addV valA valB
+        Sub -> subV valA valB
+        Div -> divV valA valB
+        Mul -> multV valA valB
+        Pow -> powV valA valB
+        Mod -> modV valA valB
+eval (UnaryOp op expr) env = do
+    val <- eval expr env
+    case op of
+        Negate -> negateV val
+        Sqrt   -> sqrtV val
+eval (Ifz condExpr thenExpr elseExpr) env = do 
+    condVal <- eval condExpr env
+    case condVal of 
+        RealVal 0.0 -> eval thenExpr env
+        IntVal 0    -> eval thenExpr env
+        RealVal _   -> eval elseExpr env
+        IntVal _    -> eval elseExpr env
+        _           -> Left "ERROR -> Ifz: condition must be a integer or real number"

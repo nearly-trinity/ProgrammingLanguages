@@ -35,8 +35,8 @@ import Lexer (Token(..))
     'is'                 { IsTok }
     'ifz'                { IfzTok }
     'for'                { ForTok }
-    'then'               { HenceTok }
-    'else'               { OtherwiseTok }
+    'then'               { ThenTok }
+    'else'               { ElseTok }
     'innit'              { EolTok }
     'fee'                { FeeTok }
     'pie'                { PieTok }

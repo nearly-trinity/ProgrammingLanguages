@@ -1321,8 +1321,8 @@ happyNewToken action sts stk (tk:tks) =
 	IsTok -> cont 32;
 	IfzTok -> cont 33;
 	ForTok -> cont 34;
-	HenceTok -> cont 35;
-	OtherwiseTok -> cont 36;
+	ThenTok -> cont 35;
+	ElseTok -> cont 36;
 	EolTok -> cont 37;
 	FeeTok -> cont 38;
 	PieTok -> cont 39;
