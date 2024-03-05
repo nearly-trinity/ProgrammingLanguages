@@ -33,12 +33,12 @@ tokens :-
   \=                       { const EqTok }
   \<                       { const LessTok }
   \>                       { const GreaterTok }
-  ForTok                   { const ForTok }
+  for                      { const ForTok }
   leq                      { const LeqTok }
   geq                      { const GeqTok }
   supposing                { const SupTok }
-  hence                    { const HenceTok }
-  otherwise                { const OtherwiseTok }
+  hence                    { const ThenTok }
+  otherwise                { const ElseTok }
   hearye                   { const HearyeTok }
   oi                       { const OiTok }
   is                       { const IsTok }

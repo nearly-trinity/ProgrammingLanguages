@@ -22,7 +22,7 @@ data Op = Add | Sub | Mul | Div | Pow | Mod
         | And | Or | Leq | Geq | LessThan | GreaterThan | Equals
         deriving (Show, Eq)
 
-data UnaryOp = Negate | Sqrt
+data UnaryOp = Negate | Sqrt | Not
              deriving (Show, Eq)
 
 data Value = IntVal Integer
@@ -92,6 +92,21 @@ divV valueA valueB = case (valueA, valueB) of
     Right $ RealVal (r / fromIntegral i)
   _ -> Left "ERROR -> divV: Incompatible types for division"
 
+compareVals :: (Double -> Double -> Bool) -> Value -> Value -> Either String Value
+compareVals op (IntVal a) (IntVal b)   = Right $ BoolVal (op (fromIntegral a) (fromIntegral b))
+compareVals op (RealVal a) (RealVal b) = Right $ BoolVal (op a b)
+compareVals op (RealVal a) (IntVal b)  = Right $ BoolVal (op a (fromIntegral b))
+compareVals op (IntVal a) (RealVal b)  = Right $ BoolVal (op (fromIntegral a) b)
+compareVals _ _ _                      = Left "ERROR -> compareVals: Operands must be integer or real values"
+
+handleAnd :: Value -> Value -> Either String Value
+handleAnd (BoolVal a) (BoolVal b) = Right $ BoolVal (a && b)
+handleAnd _ _                     = Left "ERROR -> AND: Operands must both be booleans"
+
+handleOr :: Value -> Value -> Either String Value
+handleOr (BoolVal a) (BoolVal b) = Right $ BoolVal (a || b)
+handleOr _ _                     = Left "ERROR -> OR: Operands must both be booleans"
+
 type Env = [(VariableName, Value)]
 
 initialEnv = [
@@ -138,12 +153,19 @@ eval (BinOp op expA expB) env = do
     valA <- eval expA env
     valB <- eval expB env
     case op of
-        Add -> addV valA valB
-        Sub -> subV valA valB
-        Div -> divV valA valB
-        Mul -> multV valA valB
-        Pow -> powV valA valB
-        Mod -> modV valA valB
+        Add         -> addV valA valB
+        Sub         -> subV valA valB
+        Div         -> divV valA valB
+        Mul         -> multV valA valB
+        Pow         -> powV valA valB
+        Mod         -> modV valA valB
+        Leq         -> compareVals (<=) valA valB
+        Geq         -> compareVals (>=) valA valB
+        LessThan    -> compareVals (<) valA valB
+        GreaterThan -> compareVals (>) valA valB
+        Equals      -> compareVals (==) valA valB
+        Or          -> handleOr valA valB
+        And         -> handleAnd valA valB
 eval (UnaryOp op expr) env = do
     val <- eval expr env
     case op of
@@ -156,4 +178,14 @@ eval (Ifz condExpr thenExpr elseExpr) env = do
         IntVal 0    -> eval thenExpr env
         RealVal _   -> eval elseExpr env
         IntVal _    -> eval elseExpr env
-        _           -> Left "ERROR -> Ifz: condition must be a integer or real number"
+        _           -> Left "ERROR -> Ifz: Condition must be a integer or real number"
+eval (Supposing condExpr thenExpr elseExpr) env = do
+    condVal <- eval condExpr env
+    case condVal of
+        BoolVal True  -> eval thenExpr env
+        BoolVal False -> eval elseExpr env
+        _             -> Left "ERROR -> Supposing: Condition must be a boolean value"
+eval (Oi (Variable varName) valueExpr expr) env = do
+    value <- eval valueExpr env
+    let tmpEnv = insertOrReplace varName value env
+    eval expr tmpEnv

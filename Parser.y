@@ -94,11 +94,11 @@ Expr
     | Expr '>' Expr                      { BinOp GreaterThan $1 $3 }
     | Expr '=' Expr                      { BinOp Equals $1 $3 }
     | '-' Expr                           { UnaryOp Negate $2 }  
+    | '[' Expr ']'                       { UnaryOp Negate $2 }
     | 'sqrt' Expr                        { UnaryOp Sqrt $2 }
     | 'ifz' Expr 'then' Expr 'else' Expr { Ifz $2 $4 $6 }
     | 'sup' Expr 'then' Expr 'else' Expr { Supposing $2 $4 $6 }
     | '(' Expr ')'                       { $2 }
-    | '[' Expr ']'                       { $2 }
     | 'oi' 'var' 'is' Expr 'for' Expr    { Oi (Variable $2) $4 $6 } 
 
 
