@@ -1,15 +1,15 @@
-module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), Env, evalStatement, initialEnv, prettyPrint) where
+module Evaluator (Expr(..), Stmt(..), Value(..), Op(..), UnaryOp(..), Env, evalS, initialEnv, prettyPrint) where
 
 type VariableName = String
 
 data Stmt = Stmt Expr
           | AssignStmt Expr Expr
-          | CommentStmt
+          | NoOpStmt
           deriving (Show, Eq)
 
-data Expr = IntLit Integer
-          | RealLit Double
-          | StringLit String
+data Expr = IntExpr Integer
+          | RealExpr Double
+          | StringExpr String
           | Const String
           | Variable VariableName
           | BinOp Op Expr Expr
@@ -30,13 +30,21 @@ data Value = IntVal Integer
            | RealVal Double
            | BoolVal Bool
            | AssignmentVal String
+           | NoVal
            deriving (Show, Eq)
 
+notV :: Value -> Either String Value
+notV (BoolVal b) = Right $ BoolVal (not b)
+notV _           = Left "ERROR -> notV: Unsupported type, expected boolean"
+
 negateV :: Value -> Either String Value
-negateV (BoolVal x) = Right $ BoolVal (not x)
 negateV (RealVal x) = Right $ RealVal (-x)
 negateV (IntVal x)  = Right $ IntVal (-x)
 negateV _           = Left "ERROR -> negateV: Unsupported type"
+
+type MaybeE a = Either String a
+realOfVal :: Value -> MaybeE Double
+realOfVal = undefined
 
 sqrtV :: Value -> Either String Value
 sqrtV (RealVal x) 
@@ -54,28 +62,12 @@ arithOp intF floatF (IntVal int) (RealVal real)     = Right $ RealVal (floatF (f
 arithOp intF floatF (RealVal real) (IntVal int)     = Right $ RealVal (floatF real (fromIntegral int))
 arithOp _ _ _ _                                     = Left "ERROR -> arithOp: Incompatible types"
 
-addV :: Value -> Value -> Either String Value
-addV = arithOp (+) (+)
-
-subV :: Value -> Value -> Either String Value
-subV = arithOp (-) (-)
-
-multV :: Value -> Value -> Either String Value
-multV = arithOp (*) (*)
-
-powV :: Value -> Value -> Either String Value
-powV = arithOp (\a b -> floor $ fromIntegral a ** fromIntegral b) (**)
-
 modV :: Value -> Value -> Either String Value
 modV (RealVal realA) (RealVal realB) = Right $ IntVal (floor realA `mod` floor realB)
 modV (IntVal intA) (IntVal intB)     = Right $ IntVal (intA `mod` intB)
 modV (RealVal r) (IntVal i)          = Right $ IntVal (floor r `mod` i)
 modV (IntVal i) (RealVal r)          = Right $ IntVal (i `mod` floor r)
 modV _ _                             = Left "ERROR -> modV: Incompatible types"
-
-toDouble :: Value -> Double
-toDouble (IntVal i) = fromIntegral i
-toDouble (RealVal r) = r
 
 divV :: Value -> Value -> Either String Value
 divV valueA valueB = case (valueA, valueB) of
@@ -93,38 +85,14 @@ divV valueA valueB = case (valueA, valueB) of
     Right $ RealVal (r / fromIntegral i)
   _ -> Left "ERROR -> divV: Incompatible types for division"
 
+
+-- handle like arithop (Double -> Double -> Bool) (Integer -> Integer -> Bool)
 compareVals :: (Double -> Double -> Bool) -> Value -> Value -> Either String Value
 compareVals op (IntVal a) (IntVal b)   = Right $ BoolVal (op (fromIntegral a) (fromIntegral b))
 compareVals op (RealVal a) (RealVal b) = Right $ BoolVal (op a b)
 compareVals op (RealVal a) (IntVal b)  = Right $ BoolVal (op a (fromIntegral b))
 compareVals op (IntVal a) (RealVal b)  = Right $ BoolVal (op (fromIntegral a) b)
 compareVals _ _ _                      = Left "ERROR -> compareVals: Operands must be integer or real values"
-
-andV :: Expr -> Expr -> Env -> Either String Value
-andV leftExpr rightExpr env = do
-  leftValue <- eval leftExpr env
-  case leftValue of
-    BoolVal True  -> do
-      rightValue <- eval rightExpr env
-      case rightValue of 
-        BoolVal True  -> Right $ BoolVal True
-        BoolVal False -> Right $ BoolVal False
-        _             -> Left "ERROR -> AND: Operands must both be booleans"
-    BoolVal False -> Right $ BoolVal False
-    _             -> Left "ERROR -> AND: Operands must both be booleans"
-
-orV :: Expr -> Expr -> Env -> Either String Value
-orV leftExpr rightExpr env = do
-  leftValue <- eval leftExpr env 
-  case leftValue of
-    BoolVal False -> do 
-      rightVal <- eval rightExpr env
-      case rightVal of
-        BoolVal True  -> Right $ BoolVal True
-        BoolVal False -> Right $ BoolVal False
-        _             -> Left "ERROR -> OR: Operands must both be booleans"
-    BoolVal True -> Right $ BoolVal True
-    _            -> Left "ERROR -> OR: Operands must both be booleans"
 
 type Env = [(VariableName, Value)]
 
@@ -143,72 +111,88 @@ prettyPrint (RealVal r) = show r
 prettyPrint (BoolVal b) = show b
 prettyPrint (AssignmentVal s) = s
 
-insertOrReplace :: VariableName -> Value -> Env -> Env
-insertOrReplace key value [] = [(key, value)]
-insertOrReplace key value ((k,v):xs)
+updateEnv :: VariableName -> Value -> Env -> Env
+updateEnv key value [] = [(key, value)]
+updateEnv key value ((k,v):xs)
     | key == k = (key, value) : xs
-    | otherwise = (k,v) : insertOrReplace key value xs
+    | otherwise = (k,v) : updateEnv key value xs
 
 getVariable :: VariableName -> Env -> Either String Value
 getVariable name env = case lookup name env of
         Just x  -> Right x
         Nothing -> Left "ERROR -> getVariable: Variable does not exist"
 
-evalStatement :: Stmt -> Env -> Either String (Value, Env)
-evalStatement (Stmt expr) env = do 
-    value <- eval expr env
+evalS :: Stmt -> Env -> Either String (Value, Env)
+evalS (Stmt expr) env = do 
+    value <- evalE expr env
     return (value, env)
-evalStatement (AssignStmt (Variable varName) expr) env = do
-    value <- eval expr env
-    let newEnv    = insertOrReplace varName value env
+evalS (AssignStmt (Variable varName) expr) env = do
+    value <- evalE expr env
+    let newEnv    = updateEnv varName value env
     let outputStr = varName ++ " <- " ++ prettyPrint value
     return (AssignmentVal outputStr, newEnv)
-evalStatement CommentStmt env = Left ""
+evalS NoOpStmt env = Right (NoVal, env)
 
-eval :: Expr -> Env -> Either String Value
-eval (Variable varName) env = getVariable varName env
-eval (IntLit i) env = Right $ IntVal i
-eval (RealLit r) env = Right $ RealVal r
-eval (Const c) env = getVariable c env
-eval (BinOp op expA expB) env = 
-    case op of
-      And -> andV expA expB env        
-      Or  -> orV expA expB env
-      _ -> do
-        valA <- eval expA env
-        valB <- eval expB env
-        case op of
-            Add         -> addV valA valB
-            Sub         -> subV valA valB
-            Div         -> divV valA valB
-            Mul         -> multV valA valB
-            Pow         -> powV valA valB
-            Mod         -> modV valA valB
-            Leq         -> compareVals (<=) valA valB
-            Geq         -> compareVals (>=) valA valB
-            LessThan    -> compareVals (<) valA valB
-            GreaterThan -> compareVals (>) valA valB
-            Equals      -> compareVals (==) valA valB
-eval (UnaryOp op expr) env = do
-    val <- eval expr env
-    case op of
-        Negate -> negateV val
-        Sqrt   -> sqrtV val
-eval (Ifz condExpr thenExpr elseExpr) env = do 
-    condVal <- eval condExpr env
-    case condVal of 
-        RealVal 0.0 -> eval thenExpr env
-        IntVal 0    -> eval thenExpr env
-        RealVal _   -> eval elseExpr env
-        IntVal _    -> eval elseExpr env
-        _           -> Left "ERROR -> Ifz: Condition must be a integer or real number"
-eval (Supposing condExpr thenExpr elseExpr) env = do
-    condVal <- eval condExpr env
+evalOp :: Op -> (Value -> Value -> MaybeE Value)
+evalOp  Mod          = modV 
+evalOp  Div          = divV 
+evalOp  Add          = arithOp (+) (+) 
+evalOp  Sub          = arithOp (-) (-)
+evalOp  Mul          = arithOp (*) (*)
+evalOp  Pow          = arithOp (^) (**)
+evalOp  Leq          = compareVals (<=) 
+evalOp  Geq          = compareVals (>=) 
+evalOp  LessThan     = compareVals (<) 
+evalOp  GreaterThan  = compareVals (>) 
+evalOp  Equals       = compareVals (==) 
+
+evalE :: Expr -> Env -> Either String Value
+evalE (Variable varName) env = getVariable varName env
+evalE (IntExpr i) env = Right $ IntVal i
+evalE (RealExpr r) env = Right $ RealVal r
+evalE (Const c) env = getVariable c env
+evalE (BinOp And expA expB) env = do
+  leftValue <- evalE expA env
+  case leftValue of
+    BoolVal False -> Right $ BoolVal False  
+    BoolVal True  -> do
+      rightValue <- evalE expB env
+      case rightValue of 
+        BoolVal b  -> Right $ BoolVal b
+        _             -> Left "ERROR -> AND: Operands must both be booleans"
+    _             -> Left "ERROR -> AND: Operands must both be booleans"  
+evalE (BinOp Or expA expB) env = do
+  leftValue <- evalE expA env 
+  case leftValue of
+    BoolVal True -> Right $ BoolVal True
+    BoolVal False -> do 
+      rightVal <- evalE expB env
+      case rightVal of
+        BoolVal b  -> Right $ BoolVal b
+        _          -> Left "ERROR -> OR: Operands must both be booleans"
+    _            -> Left "ERROR -> OR: Operands must both be booleans"
+evalE (BinOp op expA expB) env = do
+    valA <- evalE expA env
+    valB <- evalE expB env
+    evalOp op valA valB
+evalE (UnaryOp Not expr) env = notV =<< evalE expr env
+evalE (UnaryOp Negate expr) env = negateV =<< evalE expr env
+evalE (UnaryOp Sqrt expr) env = sqrtV =<< evalE expr env
+evalE (Ifz condExpr thenExpr elseExpr) env = do
+    condVal <- evalE condExpr env
     case condVal of
-        BoolVal True  -> eval thenExpr env
-        BoolVal False -> eval elseExpr env
+        RealVal 0.0 -> evalE thenExpr env
+        IntVal 0    -> evalE thenExpr env
+        RealVal _   -> evalE elseExpr env
+        IntVal _    -> evalE elseExpr env
+        _           -> Left "ERROR -> ifz: Condition must be a integer or real number"
+evalE (Supposing condExpr thenExpr elseExpr) env = do
+    condVal <- evalE condExpr env
+    case condVal of
+        BoolVal True  -> evalE thenExpr env
+        BoolVal False -> evalE elseExpr env
         _             -> Left "ERROR -> Supposing: Condition must be a boolean value"
-eval (Oi (Variable varName) valueExpr expr) env = do
-    value <- eval valueExpr env
-    let tmpEnv = insertOrReplace varName value env
-    eval expr tmpEnv
+evalE (Oi (Variable varName) valueExpr expr) env = do
+    value <- evalE valueExpr env
+    let tmpEnv = updateEnv varName value env
+    evalE expr tmpEnv

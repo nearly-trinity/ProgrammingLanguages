@@ -1,7 +1,7 @@
 {
 
 module Parser where
-import Evaluator (Stmt(..), Expr(..), Value(..), Op(..), UnaryOp(..))
+import Evaluator (Stmt(..), Expr(..), Op(..), UnaryOp(..))
 import Lexer (Token(..))
 
 }
@@ -62,19 +62,15 @@ import Lexer (Token(..))
 
 %%
 
-Program
-    : Statement Program            { $1 : $2 }
-    | Statement                    { [$1] }
-
 Statement
     : Expr 'innit'                      { Stmt $1 }
     | 'hearye' 'var' 'is' Expr 'innit'  { AssignStmt (Variable $2) $4 }
-    | 'comment'                         { CommentStmt }
+    | 'comment'                         { NoOpStmt }
 
 Expr
-    : 'integer'                          { IntLit $1 }
-    | 'real'                             { RealLit $1 }
-    | 'string'                           { StringLit $1 }
+    : 'integer'                          { IntExpr $1 }
+    | 'real'                             { RealExpr $1 }
+    | 'string'                           { StringExpr $1 }
     | 'var'                              { Variable $1 }
     | 'ace'                              { Const "true" }
     | 'rank'                             { Const "false" }
@@ -96,7 +92,7 @@ Expr
     | Expr '>' Expr                      { BinOp GreaterThan $1 $3 }
     | Expr '=' Expr                      { BinOp Equals $1 $3 }
     | '-' Expr                           { UnaryOp Negate $2 }  
-    | '[' Expr ']'                       { UnaryOp Negate $2 }
+    | '[' Expr ']'                       { UnaryOp Not $2 }
     | 'sqrt' Expr                        { UnaryOp Sqrt $2 }
     | 'ifz' Expr 'then' Expr 'else' Expr { Ifz $2 $4 $6 }
     | 'sup' Expr 'then' Expr 'else' Expr { Supposing $2 $4 $6 }

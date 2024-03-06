@@ -1,6 +1,6 @@
 module Main where
 
-import Evaluator (evalStatement, initialEnv, prettyPrint, Env, Stmt, Value(..))
+import Evaluator (evalS, initialEnv, prettyPrint, Env, Stmt (NoOpStmt), Value(..))
 import Lexer (scanTokens)
 import Parser (parse)
 import System.IO (isEOF, hFlush, stdout)
@@ -21,20 +21,19 @@ repl env = do
         case scanTokens inputString of
             Nothing -> putStrLn (redColor ++ "Tokenization failed.") >> repl env
             Just tokens -> do
-                parsedStmts <- catch (evaluate (parse tokens)) handleException
-                case parsedStmts of
-                    [] -> putStrLn (redColor ++ "Parse Error") >> repl env
-                    (stmt:_) -> do
-                        case evalStatement stmt env of
-                            Left errorMsg -> do 
-                                putStrLn $ redColor ++ errorMsg
-                                repl env
-                            Right (result, newEnv) -> do
-                                putStrLn $ prettyPrint result
-                                repl newEnv
+                stmt <- catch (evaluate (parse tokens)) handleException
+                case evalS stmt env of
+                    Left errorMsg -> do 
+                        unless (null errorMsg) $ putStrLn $ redColor ++ errorMsg
+                        repl env
+                    Right (result, newEnv) -> do
+                        unless (result == NoVal) $ putStrLn $ prettyPrint result
+                        repl newEnv
     where   
-        handleException :: SomeException -> IO [Stmt]
-        handleException e = return []
+        handleException :: SomeException -> IO Stmt
+        handleException e = do
+            putStrLn $ redColor ++ "Parse Error"
+            return NoOpStmt
 
 main :: IO ()
 main = do
